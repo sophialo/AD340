@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".details.ForecastDetailsActivity">
+    tools:context=".details.ForecastDetailsFragment">
 
     <TextView
         android:id="@+id/tempText"
@@ -26,7 +26,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         tools:text="Partly cloudy"
-        android:textAppearance="@style/TextAppearance.AppCompat.Display1"
+        android:textAppearance="@style/TextAppearance.AppCompat.Large"
         app:layout_constraintStart_toStartOf="@+id/tempText"
         app:layout_constraintTop_toBottomOf="@+id/tempText" />
 </androidx.constraintlayout.widget.ConstraintLayout>
