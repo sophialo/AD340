@@ -1,21 +1,82 @@
 package com.SophiaLo.ad340
 
+import android.os.Build
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.SophiaLo.ad340.api.CurrentWeather
+import com.SophiaLo.ad340.api.Forecast
+import com.SophiaLo.ad340.api.WeeklyForecast
+import com.SophiaLo.ad340.api.createOpenWeatherMapService
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import java.util.*
 import kotlin.random.Random
 
 class ForecastRepository {
 
-    private val _weeklyForecast = MutableLiveData<List<DailyForecast>>()
-    val weeklyForecast: LiveData<List<DailyForecast>> = _weeklyForecast
+    private val weatherService = createOpenWeatherMapService()
 
-    fun loadForecast(zipcode: String) {
-        val randomValues = List(10) { Random.nextFloat().rem(100) * 100 }
-        val forecastItems = randomValues.map { temp ->
-            DailyForecast(temp, getTempDescription(temp))
-        }
+    private val _currentWeather = MutableLiveData<WeeklyForecast>()
+    val currentWeather: LiveData<WeeklyForecast> = _currentWeather
 
-        _weeklyForecast.setValue(forecastItems)
+    private val _weeklyForecast = MutableLiveData<List<WeeklyForecast>>()
+    val weeklyForecast: LiveData<List<WeeklyForecast>> = _weeklyForecast
+
+    fun loadWeeklyForecast(zipcode: String) {
+
+        val call = weatherService.currentWeather(zipcode, "imperial", BuildConfig.OPEN_WEATHER_MAP_API_KEY)
+        call.enqueue(object : Callback<CurrentWeather> {
+            override fun onFailure(call: Call<CurrentWeather>, t: Throwable) {
+                Log.e(ForecastRepository::class.java.simpleName, "error loading location for weekly forecast", t)
+            }
+
+
+            override fun onResponse(call: Call<CurrentWeather>, response: Response<CurrentWeather>) {
+                val weatherResponse = response.body()
+                if (weatherResponse != null) {
+                    val forecastCall = weatherService.sevenDayForecast(
+                        lat = weatherResponse.coord.lat,
+                        lon = weatherResponse.coord.lon,
+                        exclude = "current,minutely,hourly",
+                        unit = "imperial",
+                        apiKey = BuildConfig.OPEN_WEATHER_MAP_API_KEY
+                    )
+
+                    forecastCall.enqueue(object : Callback<WeeklyForecast> {
+                        override fun onFailure(call: Call<WeeklyForecast>, t: Throwable) {
+                            Log.e(ForecastRepository::class.java.simpleName, "error loading weekly forecast", t)
+                        }
+
+                        override fun onResponse(call: Call<WeeklyForecast>, response: Response<WeeklyForecast>) {
+                            val weeklyForecastResponse = response.body()
+                            if (weeklyForecastResponse != null) {
+                                _weeklyForecast.value = weeklyForecastResponse
+                            }
+                        }
+                    })
+                }
+            }
+        })
+    }
+
+    fun loadCurrentForecast(zipcode: String) {
+        val call = weatherService.currentWeather(zipcode, "imperial", BuildConfig.OPEN_WEATHER_MAP_API_KEY)
+        call.enqueue(object : Callback<CurrentWeather> {
+            override fun onFailure(call: Call<CurrentWeather>, t: Throwable) {
+                Log.e(Forecast::class.java.simpleName, "error loading current weather", t)
+            }
+
+
+            override fun onResponse(call: Call<CurrentWeather>, response: Response<CurrentWeather>) {
+                val weatherResponse = response.body()
+                if (weatherResponse != null) {
+                    _currentWeather.value = weatherResponse
+                }
+            }
+        })
     }
 
     private fun getTempDescription(temp: Float) : String {
@@ -34,3 +95,4 @@ class ForecastRepository {
 
 
 }
+
